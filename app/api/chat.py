@@ -1,10 +1,11 @@
-from fastapi import APIRouter,Depends,HTTPException
+from fastapi import APIRouter,Depends,HTTPException,status
 from sqlalchemy.orm import Session
 from app.db.sessions import get_db
 from app.core.security import get_current_user
-from app.models.chat import Chat,ChatParticipant
+from app.models.chat import Chat,ChatParticipant,Message
 from app.models.user import User
 from app.schemas.chat import CreateChatRequest,ChatDetail
+from app.schemas.messages import MessageResponse,SendMessageRequest
 from uuid import uuid4
 
 router = APIRouter(tags=["Chat"],prefix="/chat")
@@ -43,3 +44,33 @@ def create_chat(
         participants=chat_data.participant_ids
 
     )
+
+
+@router.post("/send-message",response_model=MessageResponse)
+def send_message(
+    message_data:SendMessageRequest,
+    db:Session=Depends(get_db),
+    current_user:User=Depends(get_current_user)
+):
+    participant=db.query(ChatParticipant).filter_by(
+        chat_id=message_data.chat_id,
+        user_id=current_user.id
+    ).first
+
+    if not participant:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='You are not a participant of this chat'
+        )
+    
+    new_message=Message(
+        id=uuid4(),
+        chat_id=message_data.chat_id,
+        sender_id=current_user.id,
+        content=message_data.content
+    )
+    db.add(new_message)
+    db.commit()
+    db.refresh(new_message)
+
+    return new_message
