@@ -16,3 +16,8 @@ class MessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class FullMessageResponse(MessageResponse):
+    sender_name: Optional[str]=None
+    sender_image: Optional[str]=None
+
