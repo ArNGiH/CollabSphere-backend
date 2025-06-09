@@ -4,7 +4,7 @@ from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 from app.db.base import Base
-
+from app.models.chat import ChatParticipant
 
 class User(Base):
     __tablename__='users'
