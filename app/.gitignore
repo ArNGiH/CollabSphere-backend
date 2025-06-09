@@ -1,0 +1,46 @@
+# === Python bytecode ===
+__pycache__/
+*.py[cod]
+*$py.class
+
+# === Virtual Environment ===
+venv/
+
+# === Environment Variables ===
+.env
+.env.*
+
+# === VSCode Config ===
+.vscode/
+
+# === OS Files ===
+.DS_Store
+
+# === Alembic Migrations (auto-generated versions) ===
+alembic/versions/
+
+# === Pytest Cache ===
+.pytest_cache/
+.cache/
+
+# === MyPy ===
+.mypy_cache/
+
+# === Coverage reports ===
+htmlcov/
+.coverage
+.coverage.*
+
+# === Logs ===
+*.log
+
+# === SQLite (if ever used temporarily) ===
+*.sqlite3
+
+# === Test DBs ===
+test.db
+
+# === Local builds ===
+dist/
+build/
+*.egg-info/
