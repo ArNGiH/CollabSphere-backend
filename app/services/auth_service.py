@@ -64,3 +64,8 @@ def create_access_token(data:dict,expires_delta:timedelta=timedelta(minutes=60))
     to_encode.update({"exp": expire})
     encoded_jwt=jwt.encode(to_encode,settings.SECRET_KEY,algorithm="HS256")
     return encoded_jwt
+
+
+def get_all_other_users(db:Session,current_user_id):
+    return db.query(User).filter(User.id!=current_user_id).all()
+
