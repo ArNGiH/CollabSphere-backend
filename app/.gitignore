@@ -9,7 +9,7 @@ venv/
 # === Environment Variables ===
 .env
 .env.*
-
+alembic/
 # === VSCode Config ===
 .vscode/
 
