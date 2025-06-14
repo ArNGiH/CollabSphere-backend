@@ -27,6 +27,7 @@ class ChatParticipant(Base):
     __tablename__="chat_participants"
     user_id=Column(UUID(as_uuid=True),ForeignKey("users.id"),primary_key=True)
     chat_id=Column(UUID(as_uuid=True),ForeignKey("chats.id"),primary_key=True)
+    last_deleted_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="chat_participations")
     chat = relationship("Chat", back_populates="participants")
@@ -39,6 +40,7 @@ class Message(Base):
     sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),index=True)
     content=Column(Text,nullable=True)
     created_at=Column(DateTime,default=datetime.utcnow)
+    is_edited=Column(Boolean,default=False)
 
     chat = relationship("Chat", back_populates="messages")
     sender = relationship("User", back_populates="messages_sent")
