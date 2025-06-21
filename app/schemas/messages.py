@@ -22,6 +22,8 @@ class MessageResponse(BaseModel):
 class FullMessageResponse(MessageResponse):
     sender_name: Optional[str]=None
     sender_image: Optional[str]=None
+    media_type:Optional[str]=None
+    media_url:Optional[str]=None
 
 
 class EditMessageRequest(BaseModel):
