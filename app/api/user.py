@@ -37,3 +37,16 @@ def get_user_by_id(user_id:UUID,db:Session=Depends(get_db),current_user: User = 
         )
     return user
 
+@router.get("/users/{user_id}/status")
+def get_user_status(user_id:UUID,db:Session=Depends(get_db)):
+    user=db.query(User).filter(User.id==user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail='User not found'
+        )
+    return{
+        "is_online":user.is_online,
+        "last_seen":user.last_seen.isoformat() if user.last_seen else None
+    }
+

@@ -18,9 +18,10 @@ class ConnectionManager:
     async def send_personal_message(self,message:str,websocket:WebSocket):
         await websocket.send_text(message)
 
-    async def broadcast(self,chat_id:str,message:str):
+    async def broadcast(self,chat_id:str,message:str,exclude:WebSocket=None):
         for connection in self.active_connections[chat_id]:
-            await connection.send_text(message)
+            if(connection !=exclude):
+                await connection.send_text(message)
 
 
 
