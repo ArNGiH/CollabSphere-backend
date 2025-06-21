@@ -164,7 +164,10 @@ def get_chat_history(
             sender_id=message.sender_id,
             sender_name=sender.full_name or sender.username,
             content=message.content,
-            created_at=message.created_at
+            created_at=message.created_at,
+            media_type=message.media_type,
+            media_url=message.media_url,
+
         ))
     return response
 

@@ -78,7 +78,7 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
                 await manager.broadcast(chat_id, json.dumps(payload), exclude=websocket)
                 continue
 
-            if "content" not in data:
+            if "content" not in data or not data["content"].strip():
                 await websocket.send_text(json.dumps({
                     "type": "error",
                     "detail": "Missing message content"

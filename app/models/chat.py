@@ -40,6 +40,8 @@ class Message(Base):
     sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),index=True)
     content=Column(Text,nullable=True)
     created_at=Column(DateTime,default=datetime.utcnow)
+    media_url = Column(String, nullable=True)  # ➕ NEW
+    media_type = Column(String, nullable=True)
     is_edited=Column(Boolean,default=False)
 
     chat = relationship("Chat", back_populates="messages")
