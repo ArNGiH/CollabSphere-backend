@@ -1,28 +1,36 @@
-from fastapi import WebSocket
-from typing import Dict,List
+from typing import Dict, List, Tuple, Optional
 from collections import defaultdict
+from fastapi import WebSocket
 
 class ConnectionManager:
+    # chat_id -> list[(websocket, user_id)]
     def __init__(self):
-        self.active_connections:Dict[str,List[WebSocket]]=defaultdict(list)
+        self.active: Dict[str, List[Tuple[WebSocket, str]]] = defaultdict(list)
 
+    # NOTE: do NOT call websocket.accept() here. The route will accept first.
+    async def connect(self, chat_id: str, user_id: str, websocket: WebSocket):
+        self.active[chat_id].append((websocket, user_id))
 
-    async def connect(self,chat_id:str,websocket:WebSocket):
-        await websocket.accept()
-        self.active_connections[chat_id].append(websocket)
+    def disconnect(self, chat_id: str, websocket: WebSocket):
+        conns = self.active.get(chat_id, [])
+        if websocket in [ws for (ws, _) in conns]:
+            self.active[chat_id] = [(ws, uid) for (ws, uid) in conns if ws is not websocket]
+        if not self.active.get(chat_id):
+            # optional cleanup
+            self.active.pop(chat_id, None)
 
-    def disconnect(self,chat_id:str,websocket:WebSocket):
-        if websocket in self.active_connections[chat_id]:
-            self.active_connections[chat_id].remove(websocket)
-
-    async def send_personal_message(self,message:str,websocket:WebSocket):
-        await websocket.send_text(message)
-
-    async def broadcast(self,chat_id:str,message:str,exclude:WebSocket=None):
-        for connection in self.active_connections[chat_id]:
-            if(connection !=exclude):
-                await connection.send_text(message)
-
-
+    async def broadcast(self, chat_id: str, message: str, exclude: Optional[WebSocket] = None):
+        conns = list(self.active.get(chat_id, []))  # copy to avoid mutation during loop
+        dead: List[WebSocket] = []
+        for ws, _uid in conns:
+            if exclude is not None and ws is exclude:
+                continue
+            try:
+                await ws.send_text(message)
+            except Exception:
+                dead.append(ws)
+        # cleanup dead sockets
+        for ws in dead:
+            self.disconnect(chat_id, ws)
 
 manager = ConnectionManager()
