@@ -1,5 +1,5 @@
 from pydantic import BaseModel , UUID4
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
 from enum import Enum
 
@@ -40,3 +40,22 @@ class ChatHistoryResponse(BaseModel):
 
 
 
+
+class ChatParticipantMini(BaseModel):
+    id: UUID4
+    display_name: str
+    avatar_url: Optional[str] = None
+
+    class Config:
+        orm_mode = True 
+
+class ChatSummaryMinimal(BaseModel):
+    id: UUID4
+    type: Literal['private', 'group']
+    display_name: str             
+    name: Optional[str] = None   
+    participants: List[ChatParticipantMini]
+    created_at: datetime
+
+    class Config:
+        orm_mode = True

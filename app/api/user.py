@@ -1,13 +1,13 @@
-from fastapi import APIRouter,Depends ,HTTPException
+from fastapi import APIRouter,Depends ,HTTPException , Query
 from sqlalchemy.orm import Session
 from app.schemas.auth import UserResponse
 from app.db.sessions import get_db
 from app.core.security import get_current_user
 from app.schemas.user import UserSummary ,UserDetail
 from app.models.user import User
-from typing import List
+from typing import List,Optional
 from uuid import UUID
-from app.services.auth_service import get_all_other_users
+from app.services.auth_service import search_other_users
 
 router = APIRouter(
     tags=["Users"]
@@ -21,10 +21,14 @@ def get_my_profile(
     return current_user
 
 
-@router.get("/users",response_model=List[UserSummary])
-def list_users(db:Session=Depends(get_db),current_user:User=Depends(get_current_user)):
-    users=get_all_other_users(db,current_user.id)
-    return users
+@router.get("/users", response_model=List[UserSummary])
+def list_users(
+    q: Optional[str] = Query(None, alias="query", min_length=1, description="Search by username/full_name/email"),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return search_other_users(db, current_user.id, q, limit)
 
 
 @router.get("/users/{user_id}",response_model=UserDetail)

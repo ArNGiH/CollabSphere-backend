@@ -4,12 +4,12 @@ from datetime import datetime
 
 
 class UserSummary(BaseModel):
-    id:UUID4
-    username:str
-    full_name:Optional[str]
-    is_online:bool
-    last_seen:Optional[datetime]
-
+    id: UUID4
+    username: str
+    full_name: Optional[str] = None
+    profile_image: Optional[str] = None 
+    is_online: bool
+    last_seen: Optional[datetime] = None
 
     class Config:
         from_attributes=True

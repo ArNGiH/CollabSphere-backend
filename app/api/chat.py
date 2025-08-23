@@ -1,10 +1,11 @@
 from fastapi import APIRouter,Depends,HTTPException,status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session,joinedload
+from sqlalchemy import desc
 from app.db.sessions import get_db
 from app.core.security import get_current_user
 from app.models.chat import Chat,ChatParticipant,Message
 from app.models.user import User
-from app.schemas.chat import CreateChatRequest,ChatDetail,ChatHistoryResponse,ChatType
+from app.schemas.chat import CreateChatRequest,ChatDetail,ChatHistoryResponse,ChatType,ChatParticipantMini,ChatSummaryMinimal
 from app.schemas.messages import MessageResponse,SendMessageRequest,FullMessageResponse,EditMessageRequest
 from app.schemas.pinned_message import PinnedMessageResponse
 from app.models.pinned_message import PinnedMessage
@@ -88,47 +89,61 @@ def send_message(
 
     return new_message
 
-@router.get("/current-chats",response_model=List[ChatHistoryResponse])
+@router.get("/current-chats", response_model=List[ChatSummaryMinimal])
 def get_user_chats(
-    db:Session=Depends(get_db),
-    current_user:User=Depends(get_current_user)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    chat_ids=db.query(ChatParticipant.chat_id).filter_by(user_id=current_user.id).subquery()
-    chats = db.query(Chat).filter(Chat.id.in_(chat_ids)).order_by(Chat.created_at.desc()).all()
 
-    response=[]
+    chats = (
+        db.query(Chat)
+        .join(ChatParticipant, ChatParticipant.chat_id == Chat.id)
+        .filter(ChatParticipant.user_id == current_user.id)
+        .options(
+            joinedload(Chat.participants).joinedload(ChatParticipant.user)  # eager-load users
+        )
+        .order_by(desc(Chat.created_at))
+        .all()
+    )
+
+    response: List[ChatSummaryMinimal] = []
+
     for chat in chats:
-        other_user_id:None
-        other_user_name:None
-        other_user_image:None
+        # "Others" in this chat (exclude current user)
+        others = [p.user for p in chat.participants if p.user_id != current_user.id]
 
-        if chat.type==ChatType.private:
-            participants=[p.user_id for p in chat.participants]
-            other_id=next((uid for uid in participants if uid!=current_user.id),None)
-            if other_id:
-                other_user=db.query(User).filter(User.id==other_id).first()
-                if other_user:
-                    other_user_id=other_user.id
-                    other_user_name=other_user.full_name or other_user.username
-                    other_user_image=other_user.profile_image
+        # Minimal participant payload
+        participants = [
+            ChatParticipantMini(
+                id=u.id,
+                display_name=(u.full_name or u.username),
+                avatar_url=u.profile_image,
+            )
+            for u in others
+        ]
 
-        display_name=chat.name
-        if chat.type==ChatType.private:
-            display_name=other_user_name
+        # Display name for list/header
+        if chat.type == ChatType.private:
+            # DM: show the other user’s name
+            display_name = participants[0].display_name if participants else (chat.name or "Private")
+            name_for_groups = None
+        else:
+            # Group: show chat.name (fallback if empty)
+            display_name = chat.name or "Group"
+            name_for_groups = chat.name
 
-        response.append(ChatHistoryResponse(
-        id=chat.id,
-        name=display_name,
-        type=chat.type,
-        created_at=chat.created_at,
-        other_user_id=other_user_id,
-        other_user_name=other_user_name,
-        other_user_image=other_user_image
-    ))
+        response.append(
+            ChatSummaryMinimal(
+                id=chat.id,
+                type=chat.type.value if hasattr(chat.type, "value") else chat.type,  # tolerate enum or str
+                display_name=display_name,
+                name=name_for_groups,
+                participants=participants,
+                created_at=chat.created_at,
+            )
+        )
 
     return response
-
-
 @router.get("/history/{chat_id}",response_model=List[FullMessageResponse])
 def get_chat_history(
     chat_id:UUID,

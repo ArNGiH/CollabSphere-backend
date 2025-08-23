@@ -3,10 +3,12 @@ from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from app.models.user import User
 from app.schemas.auth import RegisterRequest
+from sqlalchemy import or_
 from datetime import datetime,timedelta
 from jose import jwt
 from app.core.config import settings
 import uuid
+from typing import Optional
 
 pwd_context=CryptContext(schemes=["bcrypt"],deprecated="auto")
 
@@ -66,6 +68,19 @@ def create_access_token(data:dict,expires_delta:timedelta=timedelta(minutes=60))
     return encoded_jwt
 
 
-def get_all_other_users(db:Session,current_user_id):
-    return db.query(User).filter(User.id!=current_user_id).all()
+def search_other_users(db: Session, current_user_id, q: Optional[str], limit: int):
+    stmt = db.query(User).filter(User.id != current_user_id)
 
+    if q:
+        like = f"%{q}%"
+        stmt = stmt.filter(
+            or_(
+                User.username.ilike(like),
+                User.full_name.ilike(like),
+                User.email.ilike(like),
+            )
+        )
+
+    stmt = stmt.order_by(User.full_name.asc(), User.username.asc())
+
+    return stmt.limit(limit).all()
