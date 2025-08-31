@@ -134,7 +134,7 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
             }))
 
             # Handle AI chat
-            if chat.type == ChatType.AI:
+            if chat.type == ChatType.ai:
                 try:
                     # Broadcast typing start
                     await manager.broadcast(chat_id, json.dumps({

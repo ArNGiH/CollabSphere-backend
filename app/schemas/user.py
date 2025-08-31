@@ -1,4 +1,4 @@
-from pydantic import BaseModel , UUID4
+from pydantic import BaseModel , UUID4,EmailStr
 from typing import Optional
 from datetime import datetime
 
@@ -14,12 +14,6 @@ class UserSummary(BaseModel):
     class Config:
         from_attributes=True
 
-
-# app/schemas/user.py
-
-from pydantic import BaseModel, EmailStr, UUID4
-from typing import Optional
-from datetime import datetime
 
 
 class UserDetail(BaseModel):
