@@ -10,6 +10,7 @@ from app.db.base import Base
 class ChatType(str,enum.Enum):
     PRIVATE="private"
     GROUP="group"
+    ai="ai"
 
 
 class Chat(Base):

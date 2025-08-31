@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     SMTP_USER:str
     SMTP_PASS:str
     FRONTEND_RESET_URL:str
+    openai_api_key: str
 
     class Config:
         env_file=".env"

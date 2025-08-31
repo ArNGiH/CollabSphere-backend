@@ -1,4 +1,5 @@
-from pydantic import BaseModel , UUID4
+from pydantic import BaseModel 
+from uuid import UUID
 from typing import List, Optional, Literal
 from datetime import datetime
 from enum import Enum
@@ -6,15 +7,16 @@ from enum import Enum
 class ChatType(str,Enum):
     private="private"
     group="group"
+    ai="ai"
 
 class CreateChatRequest(BaseModel):
     name:Optional[str]
     type:ChatType
-    participant_ids:List[UUID4]
+    participant_ids:List[UUID]
 
 
 class ChatSummary(BaseModel):
-    id:UUID4
+    id:UUID
     name:Optional[str]
     type:ChatType
     created_at:datetime
@@ -23,15 +25,15 @@ class ChatSummary(BaseModel):
         from_attributes = True
 
 class ChatDetail(ChatSummary):
-    participants:List[UUID4]
+    participants:List[UUID]
 
 class ChatHistoryResponse(BaseModel):
-    id:UUID4
+    id:UUID
     name:Optional[str]
     type:ChatType
     created_at:datetime
 
-    other_user_id: Optional[UUID4] = None
+    other_user_id: Optional[UUID] = None
     other_user_name: Optional[str] = None
     other_user_image: Optional[str] = None
 
@@ -42,7 +44,7 @@ class ChatHistoryResponse(BaseModel):
 
 
 class ChatParticipantMini(BaseModel):
-    id: UUID4
+    id: UUID
     display_name: str
     avatar_url: Optional[str] = None
 
@@ -50,8 +52,8 @@ class ChatParticipantMini(BaseModel):
         orm_mode = True 
 
 class ChatSummaryMinimal(BaseModel):
-    id: UUID4
-    type: Literal['private', 'group']
+    id: UUID
+    type: Literal['private', 'group', 'ai']
     display_name: str             
     name: Optional[str] = None   
     participants: List[ChatParticipantMini]

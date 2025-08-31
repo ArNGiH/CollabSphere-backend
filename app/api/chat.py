@@ -12,11 +12,12 @@ from app.models.pinned_message import PinnedMessage
 from datetime import datetime
 from uuid import uuid4
 from typing import List
+import uuid
 from uuid import UUID
 
 
 router = APIRouter(tags=["Chat"],prefix="/chat")
-
+AI_USER_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 @router.post("/create-new-chat",response_model=ChatDetail)
 def create_chat(
@@ -26,6 +27,10 @@ def create_chat(
 ):
     if current_user.id not in chat_data.participant_ids:
         chat_data.participant_ids.append(current_user.id)
+
+    if chat_data.type == ChatType.ai:
+        chat_data.participant_ids = [current_user.id, AI_USER_ID]
+
 
     
     new_chat=Chat(
