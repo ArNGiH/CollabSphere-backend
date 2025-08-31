@@ -33,6 +33,7 @@ def create_user(data:RegisterRequest,db:Session)->User:
         hashed_password=hash_password(data.password),
         is_active=True,
         is_verified=False,
+        public_key=data.public_key
     )
     db.add(new_user)
     db.commit()

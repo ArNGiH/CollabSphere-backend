@@ -41,9 +41,10 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
             "type": "error",
             "detail": "Invalid or expired token"
         }))
-        await websocket.close(code=4401)  # unauthorized
+        await websocket.close(code=4401)
         return
 
+    # check participation
     is_participant = db.query(ChatParticipant).filter_by(
         chat_id=chat_id, user_id=current_user.id
     ).first()
@@ -52,7 +53,7 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
             "type": "error",
             "detail": "Not a participant"
         }))
-        await websocket.close(code=4403)  # forbidden
+        await websocket.close(code=4403)
         return
 
     chat = db.query(Chat).filter_by(id=chat_id).first()
@@ -61,10 +62,10 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
             "type": "error",
             "detail": "Chat not found"
         }))
-        await websocket.close(code=4404)  # not found
+        await websocket.close(code=4404)
         return
 
-    # Mark user online
+    # mark online
     current_user.is_online = True
     db.commit()
 
@@ -85,15 +86,12 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
             raw = await websocket.receive_text()
             data = json.loads(raw)
 
-            # Handle ping/pong
+            
             if "ping" in data:
-                await websocket.send_text(json.dumps({
-                    "type": "pong",
-                    "ts": data["ping"]
-                }))
+                await websocket.send_text(json.dumps({"type": "pong", "ts": data["ping"]}))
                 continue
 
-            # Handle typing indicator
+            
             if "is_typing" in data:
                 await manager.broadcast(chat_id, json.dumps({
                     "type": "typing_status",
@@ -105,38 +103,38 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
                 }), exclude=websocket)
                 continue
 
-            # Handle regular messages
-            content = (data.get("content") or "").strip()
-            if not content:
-                continue
+            # encrypted message (frontend must send both)
+            encrypted_content = data.get("encrypted_content")
+            encrypted_keys = data.get("encrypted_keys")
 
-            # Save user message
+            if not encrypted_content or not encrypted_keys:
+                continue  
             user_msg = Message(
                 id=uuid4(),
                 chat_id=chat_id,
                 sender_id=current_user.id,
-                content=content
+                encrypted_content=encrypted_content,
+                encrypted_keys=encrypted_keys,
             )
             db.add(user_msg)
             db.commit()
             db.refresh(user_msg)
 
-            # Broadcast user message
+            # broadcast new message
             await manager.broadcast(chat_id, json.dumps({
                 "type": "new_message",
                 "data": {
                     "message_id": str(user_msg.id),
                     "chat_id": str(user_msg.chat_id),
                     "sender_id": str(user_msg.sender_id),
-                    "content": user_msg.content,
+                    "encrypted_content": user_msg.encrypted_content,
+                    "encrypted_keys": user_msg.encrypted_keys,
                     "created_at": user_msg.created_at.isoformat()
                 }
             }))
 
-            # Handle AI chat
             if chat.type == ChatType.ai:
                 try:
-                    # Broadcast typing start
                     await manager.broadcast(chat_id, json.dumps({
                         "type": "typing_status",
                         "data": {
@@ -146,7 +144,7 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
                         }
                     }))
 
-                    # Fetch recent history for context
+                    # build history
                     history_messages = (
                         db.query(Message)
                         .filter(Message.chat_id == chat_id)
@@ -154,42 +152,37 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
                         .limit(10)
                         .all()
                     )
-
                     history = []
-                    for m in reversed(history_messages): 
-                        if m.sender_id == AI_USER_ID:
-                            role = "assistant"
-                        else:
-                            role = "user"
-                        history.append({"role": role, "content": m.content})
+                    for m in reversed(history_messages):
+                        role = "assistant" if m.sender_id == AI_USER_ID else "user"
+                        history.append({"role": role, "content": m.encrypted_content})
 
-                    # Get AI reply
-                    reply = await get_ai_reply(content, history=history)
+                    # AI reply
+                    reply = await get_ai_reply(encrypted_content, history=history)
 
-                    # Save AI message
                     ai_msg = Message(
                         id=uuid4(),
                         chat_id=chat_id,
                         sender_id=AI_USER_ID,
-                        content=reply
+                        encrypted_content=reply,
+                        encrypted_keys={}, 
                     )
                     db.add(ai_msg)
                     db.commit()
                     db.refresh(ai_msg)
 
-                    # Broadcast AI message
                     await manager.broadcast(chat_id, json.dumps({
                         "type": "new_message",
                         "data": {
                             "message_id": str(ai_msg.id),
                             "chat_id": str(ai_msg.chat_id),
                             "sender_id": str(AI_USER_ID),
-                            "content": ai_msg.content,
+                            "encrypted_content": ai_msg.encrypted_content,
+                            "encrypted_keys": ai_msg.encrypted_keys,
                             "created_at": ai_msg.created_at.isoformat()
                         }
                     }))
 
-                    # Broadcast typing end
                     await manager.broadcast(chat_id, json.dumps({
                         "type": "typing_status",
                         "data": {
@@ -207,22 +200,17 @@ async def websocket_endpoint(websocket: WebSocket, chat_id: str, token: str = Qu
 
     except WebSocketDisconnect:
         pass
-    except Exception:
-        pass
     finally:
-        try:
-            manager.disconnect(chat_id, websocket)
-            current_user.is_online = False
-            current_user.last_seen = datetime.utcnow()
-            db.commit()
-            await manager.broadcast(chat_id, json.dumps({
-                "type": "presence_update",
-                "data": {
-                    "user_id": str(current_user.id),
-                    "is_online": False,
-                    "username": current_user.username,
-                    "last_seen": current_user.last_seen.isoformat()
-                }
-            }))
-        except Exception:
-            pass
+        manager.disconnect(chat_id, websocket)
+        current_user.is_online = False
+        current_user.last_seen = datetime.utcnow()
+        db.commit()
+        await manager.broadcast(chat_id, json.dumps({
+            "type": "presence_update",
+            "data": {
+                "user_id": str(current_user.id),
+                "is_online": False,
+                "username": current_user.username,
+                "last_seen": current_user.last_seen.isoformat()
+            }
+        }))

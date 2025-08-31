@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Boolean , DateTime ,Enum,ForeignKey,Text
+from sqlalchemy import Column, String, Boolean , DateTime ,Enum,ForeignKey,Text,JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from datetime import datetime
@@ -39,7 +39,9 @@ class Message(Base):
     id=Column(UUID(as_uuid=True),primary_key=True,default=uuid.uuid4)
     chat_id=Column(UUID(as_uuid=True),ForeignKey("chats.id"),index=True)
     sender_id = Column(UUID(as_uuid=True), ForeignKey("users.id"),index=True)
-    content=Column(Text,nullable=True)
+    #content=Column(Text,nullable=True)
+    encrypted_content = Column(Text, nullable=False)
+    encrypted_keys = Column(JSON, nullable=False)  # {user_id: encryptedAES}
     created_at=Column(DateTime,default=datetime.utcnow)
     media_url = Column(String, nullable=True)  # ➕ NEW
     media_type = Column(String, nullable=True)

@@ -43,7 +43,8 @@ async def upload_media(
             chat_id=chat_id,
             sender_id=current_user.id,
             media_url=file_url,
-            content=content,
+            encrypted_content=content or "",  
+            encrypted_keys={},                 
             media_type=media_type
         )
         db.add(media_message)
@@ -57,7 +58,8 @@ async def upload_media(
                 "message_id": str(media_message.id),
                 "chat_id": str(media_message.chat_id),
                 "sender_id": str(media_message.sender_id),
-                "content": media_message.content,
+                "encrypted_content": media_message.encrypted_content,
+                "encrypted_keys": media_message.encrypted_keys,
                 "media_url": media_message.media_url,
                 "media_type": media_message.media_type,
                 "created_at": media_message.created_at.isoformat()

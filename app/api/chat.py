@@ -86,7 +86,8 @@ def send_message(
         id=uuid4(),
         chat_id=message_data.chat_id,
         sender_id=current_user.id,
-        content=message_data.content
+        encrypted_content=message_data.encrypted_content,
+        encrypted_keys=message_data.encrypted_keys
     )
     db.add(new_message)
     db.commit()
@@ -123,6 +124,7 @@ def get_user_chats(
                 id=u.id,
                 display_name=(u.full_name or u.username),
                 avatar_url=u.profile_image,
+                public_key=u.public_key
             )
             for u in others
         ]
@@ -183,11 +185,11 @@ def get_chat_history(
             chat_id=message.chat_id,
             sender_id=message.sender_id,
             sender_name=sender.full_name or sender.username,
-            content=message.content,
+            encrypted_content=message.encrypted_content,
             created_at=message.created_at,
             media_type=message.media_type,
             media_url=message.media_url,
-
+            sender_public_key=sender.public_key
         ))
     return response
 
@@ -258,7 +260,7 @@ def edit_message(
             detail="You are not authorized to edit this message"
         )
     message.is_edited=True
-    message.content=message_data.content
+    message.encrypted_content = message_data.content
     db.commit()
     db.refresh(message)
     return message

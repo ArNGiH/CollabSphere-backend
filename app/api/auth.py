@@ -1,5 +1,7 @@
-from fastapi import APIRouter,Depends,status
+from fastapi import APIRouter,Depends,status,HTTPException
 from sqlalchemy.orm import Session
+from uuid import UUID
+from app.models.user import User
 from app.schemas.auth import RegisterResponse,RegisterRequest,LoginRequest,LoginResponse,UserResponse
 from app.services.auth_service import create_user,authenticate_user,create_access_token
 from app.db.sessions import get_db
@@ -44,3 +46,14 @@ def forgot_password(data:ForgotPasswordRequest,db:Session=Depends(get_db)):
 def reset_user_password(data:ResetPasswordRequest,db:Session=Depends(get_db)):
     reset_password(data.token,data.new_password,db)
     return {"message": "Password has been reset successfully."}
+
+
+@router.put("/users/{user_id}/public-key", response_model=UserResponse)
+def update_public_key(user_id: UUID, public_key: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.public_key = public_key
+    db.commit()
+    db.refresh(user)
+    return user

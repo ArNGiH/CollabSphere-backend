@@ -47,6 +47,7 @@ class ChatParticipantMini(BaseModel):
     id: UUID
     display_name: str
     avatar_url: Optional[str] = None
+    public_key: Optional[str] = None
 
     class Config:
         orm_mode = True 

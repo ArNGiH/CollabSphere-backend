@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Integer, Boolean, DateTime
+from sqlalchemy import Column, String, Integer, Boolean, DateTime,Text
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
@@ -33,6 +33,8 @@ class User(Base):
 
     chat_participations = relationship("ChatParticipant", back_populates="user")
     messages_sent = relationship("Message", back_populates="sender")
+
+    public_key = Column(Text, nullable=True)
 
 
 

@@ -11,6 +11,8 @@ class RegisterRequest(BaseModel):
     username:str
     full_name:Optional[str]
     password:PasswordStr
+    public_key: Optional[str]
+    
 
 
 class LoginRequest(BaseModel):
@@ -36,6 +38,7 @@ class UserResponse(BaseModel):
     is_superuser:bool
     created_at:datetime
     updated_at:Optional[datetime]
+    public_key: Optional[str]
 
     class Config:
         from_attributes = True
